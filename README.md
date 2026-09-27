@@ -36,6 +36,6 @@ StockSurge provides a dedicated B2B platform where businesses can:
 
 ## Team Members
 - **Anadi Swarnkar** - Frontend Developer  & Team Lead
-- **Atharv Raghuwanshi** - Database, Integration & Team Lead
+- **Atharv Raghuwanshi** - Database, Integration 
 - **Aryan Nayak** - Backend Developer
 - **Akshat Malviya** - UI/UX Designer & Core Contributor
