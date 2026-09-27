@@ -1,79 +1,41 @@
-# StockSurge Backend
+# StockSurge
 
-MVP backend for StockSurge — an intelligent platform that helps businesses find value in deadstock and connects unused inventory with buyer requirements.
+*Turn Dead Stock Into Liquid Capital.*
 
-## Tech stack
-- Java 17
-- Spring Boot 3.5.5
-- Spring Web
-- Spring Data JPA
-- PostgreSQL
-- Maven
-- Lombok
+StockSurge is a B2B marketplace built for the Bit N Build 2026 Hackathon (Open Domain Mission) that helps businesses buy, sell, and liquidate dormant inventory seamlessly. 
 
-## 1. Create PostgreSQL database
-Create a database named:
+## The Problem
+Businesses often accumulate "dead stock"—surplus inventory or raw materials that sit in warehouses, tying up capital and taking up valuable space. Finding buyers for these specific, bulk materials is traditionally difficult, slow, and inefficient.
 
-stocksurge
+## Our Solution
+StockSurge provides a dedicated B2B platform where businesses can:
+- *Liquidate:* Post their dead stock with images, expected prices, and location details.
+- *Discover:* Search for heavily discounted raw materials or surplus goods by category, state, and city.
+- *Connect:* Facilitate direct transactions between businesses to clear out inventory and recover tied-up capital.
 
-## 2. Configure password
-Open:
-src/main/resources/application.properties
+## Tech Stack
+- *Frontend:* HTML5, Tailwind CSS, Vanilla JavaScript, Three.js (3D UI integration)
+- *Backend & Database:* Node.js, Express, SQLite
 
-Change:
-spring.datasource.password=CHANGE_ME
+## How to Run the Project Locally
 
-to your PostgreSQL password.
+1. Clone this repository to your local machine:
+   bash
+   git clone [https://github.com/atharv9985-blip/GDG-PROJECT.git](https://github.com/atharv9985-blip/GDG-PROJECT.git)
+   
+2. Navigate into the project folder:
+   bash
+   cd GDG-PROJECT
+   
+3. Open the index.html file in any modern web browser to view the interactive frontend prototype.
 
-## 3. Run
-Open the project in IntelliJ IDEA and run:
+## Future Scope
+- Integration with GST APIs for real-time business verification.
+- Secure in-app messaging and B2B payment gateways.
+- AI-driven matching algorithms to automatically pair buyer requirements with incoming dead stock listings.
 
-StockSurgeApplication.java
-
-Server:
-http://localhost:8080
-
-## 4. Test inventory API
-
-POST /api/inventory
-
-Example JSON:
-{
-  "productName": "Cotton T-Shirts",
-  "category": "Textile",
-  "description": "100 unused cotton T-shirts from previous season",
-  "quantity": 100,
-  "conditionStatus": "GOOD",
-  "pricePerUnit": 180,
-  "location": "Bhopal",
-  "imageUrl": "",
-  "status": "ACTIVE"
-}
-
-Then:
-GET /api/inventory
-
-## Buyer requirement
-
-POST /api/requirements
-
-{
-  "buyerName": "ABC Reseller",
-  "category": "Textile",
-  "description": "Need cotton t-shirts",
-  "quantityRequired": 80,
-  "minBudgetPerUnit": 100,
-  "maxBudgetPerUnit": 200,
-  "location": "Bhopal"
-}
-
-Generate matches:
-POST /api/requirements/{id}/matches
-
-View matches:
-GET /api/requirements/{id}/matches
-
-## Current MVP
-The matching engine uses simple rules for category, quantity, budget, location and condition.
-
-AI/Gemini, authentication, image upload, chat, payments and production security are intentionally not included yet.
+## Team Members
+- *Atharv Raghuwanshi* - Database, Integration & Team Lead
+- *Anadi Swarnkar* - Frontend Developer
+- *Aryan Nayak* - Backend Developer
+- *Akshat Malviya* - UI/UX Designer & Core Contributor
