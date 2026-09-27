@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockSurge - B2B Dead Stock Marketplace</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Dashboard Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Three.js for 3D Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- FontAwesome & Google Fonts (Switched to vibrant 'Outfit' font) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        const API_BASE_URL = "http://localhost:8080/api";
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        purple: { 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 900: '#581c87' },
+                        fuchsia: { 400: '#e879f9', 500: '#d946ef', 600: '#c026d3' },
+                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669', 900: '#064e3b' },
+                        orange: { 400: '#fb923c', 500: '#f97316', 600: '#ea580c' },
+                        neon: { pink: '#ff0055', cyan: '#00e5ff', purple: '#bc13fe', lime: '#ccff00' }
+                    },
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d946ef; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ea580c; }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 40px -10px rgba(147, 51, 234, 0.15);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(147, 51, 234, 0.1);
+        }
+        
+        .glowing-toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border: 2px solid #d946ef;
+            box-shadow: 0 0 25px rgba(217, 70, 239, 0.5);
+            color: #581c87;
+        }
+
+        /* Premium Toast Custom Styles */
+        .premium-toast {
+            background: rgba(15, 23, 42, 0.85); /* Slate 900 Glass */
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(217, 70, 239, 0.4);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.4);
+            overflow: hidden;
+        }
+        
+        @keyframes toastProgress {
+            0% { width: 100%; }
+            100% { width: 0%; }
+        }
+        
+        .toast-shine {
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: sweep 2s infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes sweep {
+            0% { left: -100%; }
+            50%, 100% { left: 200%; }
+        }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active {
+            opacity: 1; transform: scale(1);
+            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Sidebar Icon Enhancements */
+        .sidebar-btn:hover .icon-box {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-btn.active .icon-box {
+            background: rgba(255, 255, 255, 0.25) !important;
+            color: white !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+            box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.3), 0 4px 10px rgba(0,0,0,0.1) !important;
+        }
+
+        /* =========================================
+           ULTRA-UNIQUE "QUANTUM CORE S²" LOGO
+           ========================================= */
+        .ultra-logo-container {
+            position: relative;
+            width: 3.5rem; /* 56px */
+            height: 3.5rem;
+            perspective: 1000px;
+            z-index: 50;
+        }
+        
+        /* The shape-shifting energy ring */
+        .ultra-logo-ring {
+            position: absolute;
+            inset: -5px;
+            background: conic-gradient(from 0deg, #ff0055, #bc13fe, #00e5ff, #ccff00, #ff0055);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            animation: logo-spin 4s linear infinite, logo-morph 6s ease-in-out infinite;
+            filter: blur(5px);
+            opacity: 0.7;
+            transition: all 0.5s ease;
+        }
+
+        .group:hover .ultra-logo-ring {
+            filter: blur(8px);
+            opacity: 1;
+            animation-duration: 2s; /* Spins faster on hover */
+        }
+
+        /* The deep glass 3D core */
+        .ultra-logo-core {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, #2a0845, #100319);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 0 25px rgba(188, 19, 254, 0.5), 0 10px 20px rgba(0,0,0,0.3);
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* Futuristic grid inside the core */
+        .ultra-logo-core::before {
+            content: '';
+            position: absolute;
+            inset: -20px;
+            background-image: linear-gradient(rgba(0, 229, 255, 0.2) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 229, 255, 0.2) 1px, transparent 1px);
+            background-size: 10px 10px;
+            opacity: 0.4;
+            transform: translateZ(-20px);
+        }
+        
+        .group:hover .ultra-logo-core {
+            transform: translateZ(20px) rotateX(15deg) rotateY(-15deg);
+            border-color: rgba(0, 229, 255, 0.6);
+        }
+
+        /* The massive 'S' */
+        .ultra-logo-s {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-style: italic;
+            background: linear-gradient(135deg, #ffffff 0%, #d946ef 50%, #00e5ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.8));
+            transform: translateZ(30px);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .group:hover .ultra-logo-s {
+            transform: translateZ(50px) scale(1.15);
+            background: linear-gradient(135deg, #00e5ff 0%, #ff0055 50%, #ccff00 100%);
+            -webkit-background-clip: text;
+        }
+
+        /* The physical flying '2' Square */
+        .ultra-logo-square {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 0, 85, 0.95); /* Neon Pink */
+            backdrop-filter: blur(10px);
+            border: 2px solid #fff;
+            border-radius: 8px; /* A true square badge */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: white;
+            font-size: 1.1rem;
+            transform-style: preserve-3d;
+            transform: translateZ(40px) rotate(-10deg);
+            box-shadow: 0 10px 20px rgba(255, 0, 85, 0.6), inset 0 0 10px rgba(255,255,255,0.5);
+            animation: float-square 3s ease-in-out infinite;
+            transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+
+        /* The crazy 3D pop-out hover effect */
+        .group:hover .ultra-logo-square {
+            transform: translateZ(90px) translateX(25px) translateY(-25px) rotateX(360deg) rotateY(180deg) scale(1.4);
+            background: rgba(0, 229, 255, 0.95); /* Swaps to Electric Cyan */
+            box-shadow: 0 20px 40px rgba(0, 229, 255, 0.6), inset 0 0 15px rgba(255,255,255,0.8);
+            border-color: #ccff00;
+            color: #100319;
+        }
+
+        /* Keyframes */
+        @keyframes logo-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes logo-morph {
+            0%, 100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+            33% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; }
+            66% { border-radius: 30% 70% 30% 70% / 70% 30% 70% 30%; }
+        }
+
+        @keyframes float-square {
+            0%, 100% { margin-top: 0px; }
+            50% { margin-top: -6px; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col relative">
+
+    <canvas id="bgCanvas" class="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000"></canvas>
+
+    <div id="toastContainer" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+    <div id="landingPage" class="relative z-10 flex flex-col min-h-screen">
+        <nav class="p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-6 cursor-pointer group" onclick="showPage('landingPage')">
+                <!-- UNIQUE CUSTOM "QUANTUM CORE" S-SQUARE LOGO -->
+                <div class="ultra-logo-container">
+                    <div class="ultra-logo-ring"></div>
+                    <div class="ultra-logo-core">
+                        <!-- Padding added to stop 'S' from clipping -->
+                        <span class="ultra-logo-s pr-1 pb-1">S</span>
+                    </div>
+                    <div class="ultra-logo-square">2</div>
+                </div>
+                <span class="font-black text-4xl tracking-tight text-slate-900 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-orange-500 transition-all duration-300">StockSurge</span>
+            </div>
+            <!-- Removed the Sign In button here as requested -->
+        </nav>
+
+        <main class="flex-1 flex flex-col items-center justify-center text-center px-4 fade-in z-10">
+            <div class="inline-block mb-6 px-5 py-2 rounded-full border border-fuchsia-500/40 bg-white/70 backdrop-blur-md text-purple-800 text-sm font-black tracking-widest uppercase shadow-lg">
+                <i class="fa-solid fa-bolt mr-2 text-orange-500"></i> Revolutionizing B2B Dead Stock
+            </div>
+            <h1 class="text-6xl md:text-8xl font-black mb-6 leading-tight text-slate-900 drop-shadow-sm">
+                Turn Dead Stock Into <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500">Liquid Capital.</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-slate-800 font-medium max-w-3xl mb-12 glass-panel p-6 rounded-3xl shadow-xl">
+                The premier marketplace for businesses to buy and sell surplus inventory. Recover costs, reduce waste, and find incredible wholesale deals.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-6">
+                <!-- Main Login Trigger -->
+                <button onclick="showPage('loginPage')" class="px-10 py-5 rounded-2xl font-black text-xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white shadow-2xl shadow-purple-500/40 transition-all transform hover:-translate-y-2 border-2 border-white/20">
+                    Login / Register <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+                <button onclick="showPage('howItWorksPage')" class="px-10 py-5 rounded-2xl font-black text-xl glass-panel hover:bg-white transition-all text-purple-900 shadow-xl border-2 border-purple-200 hover:-translate-y-2">
+                    <i class="fa-solid fa-circle-play mr-2 text-fuchsia-500"></i> How it works
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <div id="howItWorksPage" class="relative z-10 min-h-screen hidden flex-col items-center justify-center px-4 py-20">
+        <div class="w-full max-w-6xl mx-auto relative z-10 glass-panel rounded-[3rem] p-10 md:p-16 shadow-2xl border-2 border-white">
+            <button onclick="showPage('landingPage')" class="absolute top-8 left-8 text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-2 font-black bg-white shadow-md border border-purple-100 px-6 py-3 rounded-full text-lg">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            
+            <div class="text-center mb-16 fade-in mt-12 md:mt-0">
+                <h2 class="text-5xl md:text-6xl font-black text-slate-900 mb-6">How StockSurge Works</h2>
+                <p class="text-xl text-slate-700 font-medium max-w-3xl mx-auto">A seamless ecosystem to turn your dormant inventory into active working capital.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+                <div class="hidden lg:block absolute top-1/2 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500/0 via-fuchsia-400 to-orange-500/0 -z-10 transform -translate-y-1/2 rounded-full"></div>
+
+                <!-- Steps -->
+                <div class="glass-card bg-white/90 p-8 rounded-[2rem] text-center transform transition-all duration-300 hover:-translate-y-3 shadow-xl border-2 border-purple-100 fade-in" style="animation-delay: 0.1s;">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-br from-purple-600 to-fuchsia-500 rounded-3xl flex items-center justify-center mb-6 shadow-lg border-4 border-white relative">
+                        <i class="fa-solid fa-store text-4xl text-white"></i>
+                        <div class="absolute -top-4 -right-4 w-10 h-10 bg-orange-500 text-white font-black text-xl rounded-full flex items-center justify-center border-4 border-white shadow-md">1</div>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-3">Register</h3>
+                    <p class="text-slate-600 font-medium">Sign up with your GST number to join our trusted B2B network.</p>
+                </div>
+                
+                <div class="glass-card bg-white/90 p-8 rounded-[2rem] text-center transform transition-all duration-300 hover:-translate-y-3 shadow-xl border-2 border-purple-100 fade-in" style="animation-delay: 0.2s;">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-br from-fuchsia-500 to-pink-500 rounded-3xl flex items-center justify-center mb-6 shadow-lg border-4 border-white relative">
+                        <i class="fa-solid fa-box-open text-4xl text-white"></i>
+                        <div class="absolute -top-4 -right-4 w-10 h-10 bg-orange-500 text-white font-black text-xl rounded-full flex items-center justify-center border-4 border-white shadow-md">2</div>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-3">List Stock</h3>
+                    <p class="text-slate-600 font-medium">Upload photos and set discounted prices for surplus inventory.</p>
+                </div>
+
+                <div class="glass-card bg-white/90 p-8 rounded-[2rem] text-center transform transition-all duration-300 hover:-translate-y-3 shadow-xl border-2 border-purple-100 fade-in" style="animation-delay: 0.3s;">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-br from-pink-500 to-orange-500 rounded-3xl flex items-center justify-center mb-6 shadow-lg border-4 border-white relative">
+                        <i class="fa-solid fa-magnifying-glass-chart text-4xl text-white"></i>
+                        <div class="absolute -top-4 -right-4 w-10 h-10 bg-purple-600 text-white font-black text-xl rounded-full flex items-center justify-center border-4 border-white shadow-md">3</div>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-3">Smart Match</h3>
+                    <p class="text-slate-600 font-medium">Buyers search for raw materials and our algorithm matches them to you.</p>
+                </div>
+
+                <div class="glass-card bg-white/90 p-8 rounded-[2rem] text-center transform transition-all duration-300 hover:-translate-y-3 shadow-xl border-2 border-purple-100 fade-in" style="animation-delay: 0.4s;">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-br from-orange-500 to-yellow-400 rounded-3xl flex items-center justify-center mb-6 shadow-lg border-4 border-white relative">
+                        <i class="fa-solid fa-handshake text-4xl text-white"></i>
+                        <div class="absolute -top-4 -right-4 w-10 h-10 bg-purple-600 text-white font-black text-xl rounded-full flex items-center justify-center border-4 border-white shadow-md">4</div>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-3">Liquidate</h3>
+                    <p class="text-slate-600 font-medium">Negotiate securely and turn stagnant goods back into cash instantly.</p>
+                </div>
+            </div>
+            
+            <div class="mt-16 text-center fade-in" style="animation-delay: 0.6s;">
+                <button onclick="showPage('loginPage')" class="px-12 py-5 rounded-2xl font-black text-xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xl transition-all transform hover:-translate-y-1">
+                    Start Selling Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginPage" class="relative z-10 min-h-screen hidden flex-col items-center justify-center px-4 w-full">
+        <div class="w-full max-w-lg glass-panel bg-white/80 rounded-[3rem] p-10 md:p-12 shadow-2xl fade-in relative overflow-hidden border-2 border-white mx-auto">
+            <!-- Decorative blur orbs -->
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-fuchsia-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 pointer-events-none"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 pointer-events-none"></div>
+            
+            <button onclick="showPage('landingPage')" class="absolute top-6 left-6 text-slate-600 hover:text-purple-600 transition-colors bg-white shadow-md w-12 h-12 rounded-full flex items-center justify-center font-bold z-20 border border-purple-100">
+                <i class="fa-solid fa-arrow-left text-xl"></i>
+            </button>
+            
+            <div class="text-center mb-10 mt-6 relative z-10">
+                <!-- LARGE UNIQUE CUSTOM "QUANTUM CORE" S-SQUARE LOGO (LOGIN PAGE) -->
+                <div class="flex justify-center mb-10 mt-2">
+                    <div class="ultra-logo-container scale-[1.3] transform origin-center cursor-pointer">
+                        <div class="ultra-logo-ring"></div>
+                        <div class="ultra-logo-core">
+                            <span class="ultra-logo-s pr-1 pb-1">S</span>
+                        </div>
+                        <div class="ultra-logo-square">2</div>
+                    </div>
+                </div>
+                <h2 class="text-4xl font-black text-slate-900">Welcome Back</h2>
+                <p class="text-slate-600 font-medium mt-3 text-lg">Sign in to manage your inventory</p>
+            </div>
+
+            <form class="space-y-8 relative z-10 w-full" onsubmit="event.preventDefault(); showPage('dashboardPage'); showToast('Successfully logged in!', 'success');">
+                <div class="relative pt-2 flex flex-col items-center justify-center w-full">
+                    <input type="email" id="emailInput" class="peer block w-full text-center bg-transparent border-b-4 border-slate-300 px-0 py-3 text-slate-900 font-bold text-xl focus:outline-none focus:border-fuchsia-500 transition-colors placeholder-transparent" placeholder="Email Address" required>
+                    <label for="emailInput" class="absolute top-5 left-1/2 -translate-x-1/2 text-slate-500 font-bold text-lg transition-all duration-300 pointer-events-none origin-center peer-focus:-translate-y-8 peer-focus:scale-90 peer-focus:text-fuchsia-600 peer-[&:not(:placeholder-shown)]:-translate-y-8 peer-[&:not(:placeholder-shown)]:scale-90 peer-[&:not(:placeholder-shown)]:text-fuchsia-600">
+                        Email Address
+                    </label>
+                </div>
+                <div class="relative pt-2 flex flex-col items-center justify-center w-full">
+                    <input type="password" id="passwordInput" class="peer block w-full text-center bg-transparent border-b-4 border-slate-300 px-0 py-3 text-slate-900 font-bold text-xl focus:outline-none focus:border-fuchsia-500 transition-colors placeholder-transparent" placeholder="Password" required>
+                    <label for="passwordInput" class="absolute top-5 left-1/2 -translate-x-1/2 text-slate-500 font-bold text-lg transition-all duration-300 pointer-events-none origin-center peer-focus:-translate-y-8 peer-focus:scale-90 peer-focus:text-fuchsia-600 peer-[&:not(:placeholder-shown)]:-translate-y-8 peer-[&:not(:placeholder-shown)]:scale-90 peer-[&:not(:placeholder-shown)]:text-fuchsia-600">
+                        Password
+                    </label>
+                </div>
+                <div class="flex justify-between items-center text-base px-2 mt-4 w-full">
+                    <label class="flex items-center text-slate-700 font-bold cursor-pointer">
+                        <input type="checkbox" class="mr-3 accent-fuchsia-600 w-5 h-5 rounded"> Remember me
+                    </label>
+                    <a href="#" class="text-fuchsia-600 hover:text-orange-500 font-black transition-colors">Forgot Password?</a>
+                </div>
+                <button type="submit" class="w-full py-5 rounded-2xl font-black text-xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white shadow-2xl shadow-fuchsia-500/40 transition-all transform hover:-translate-y-1 mt-8">
+                    Enter Dashboard <i class="fa-solid fa-right-to-bracket ml-2"></i>
+                </button>
+            </form>
+            <div class="text-center mt-6">
+                <span class="text-slate-500 font-bold">New to StockSurge?</span>
+                <button type="button" onclick="openRegisterModal()" class="ml-2 text-fuchsia-600 hover:text-orange-500 font-black">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardPage" class="relative z-10 min-h-screen hidden bg-slate-50/90 backdrop-blur-3xl text-slate-900 flex-col">
+        <!-- Dashboard Navbar -->
+        <nav class="bg-white/80 backdrop-blur-md border-b-2 border-purple-100 sticky top-0 z-40 shadow-sm">
+            <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-24">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center gap-6 cursor-pointer group" onclick="showPage('landingPage')">
+                            <!-- UNIQUE CUSTOM "QUANTUM CORE" S-SQUARE LOGO (DASHBOARD) -->
+                            <div class="ultra-logo-container transform scale-90 origin-left">
+                                <div class="ultra-logo-ring"></div>
+                                <div class="ultra-logo-core">
+                                    <span class="ultra-logo-s pr-1 pb-1">S</span>
+                                </div>
+                                <div class="ultra-logo-square">2</div>
+                            </div>
+                            <span class="font-black text-3xl tracking-tight text-slate-900 hidden sm:block group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-orange-500 transition-all duration-300">StockSurge</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                        <button onclick="openAddModal()" class="hidden md:inline-flex items-center px-6 py-3 border border-transparent text-base font-black rounded-2xl shadow-xl text-white bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 hover:scale-105 transition-all transform">
+                            <i class="fa-solid fa-plus mr-2 text-xl"></i> Quick Add Inventory
+                        </button>
+                        <!-- Profile Button (Kept Top Right) -->
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-white font-black text-xl border-4 border-white shadow-xl cursor-pointer hover:scale-105 transition-transform">
+                            JD
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-1 max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex flex-col lg:flex-row gap-8 relative z-10">
+            
+            <aside class="w-full lg:w-72 flex-shrink-0">
+                <div class="bg-white rounded-[2rem] shadow-xl border-2 border-purple-50 p-6 sticky top-32">
+                    <h3 class="font-black text-slate-400 mb-6 text-sm uppercase tracking-widest pl-2">Main Menu</h3>
+                    <ul class="space-y-3" id="sidebarMenu">
+                        <li>
+                            <button onclick="switchDashboardView('overviewView')" data-target="overviewView" class="sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-blue-100 text-blue-600 flex items-center justify-center transition-all duration-300 shadow-sm border border-blue-200/50">
+                                    <i class="fa-solid fa-chart-pie text-xl"></i>
+                                </div>
+                                Overview
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="switchDashboardView('myInventoryView')" data-target="myInventoryView" class="sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-indigo-100 text-indigo-600 flex items-center justify-center transition-all duration-300 shadow-sm border border-indigo-200/50">
+                                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                                </div>
+                                My Inventory
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="openAddModal()" class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 transition-all border-2 border-orange-200">
+                                <div class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-orange-400 to-pink-500 text-white flex items-center justify-center transition-all duration-300 shadow-md shadow-orange-500/30 group-hover:scale-110 group-hover:rotate-90">
+                                    <i class="fa-solid fa-plus text-xl"></i>
+                                </div>
+                                Add Inventory
+                            </button>
+                        </li>
+                        <li>
+                            <!-- Default Active View -->
+                            <button onclick="switchDashboardView('findStockView')" data-target="findStockView" class="sidebar-btn active group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white shadow-xl shadow-fuchsia-500/30 border-2 border-fuchsia-400">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center transition-all duration-300 shadow-sm border border-fuchsia-200/50">
+                                    <i class="fa-solid fa-magnifying-glass text-xl"></i>
+                                </div>
+                                Find Stock
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="switchDashboardView('myRequirementsView')" data-target="myRequirementsView" class="sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-emerald-100 text-emerald-600 flex items-center justify-center transition-all duration-300 shadow-sm border border-emerald-200/50">
+                                    <i class="fa-solid fa-list-check text-xl"></i>
+                                </div>
+                                Requirements
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="switchDashboardView('matchesView')" data-target="matchesView" class="sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-pink-100 text-pink-600 flex items-center justify-center transition-all duration-300 shadow-sm border border-pink-200/50">
+                                    <i class="fa-solid fa-handshake-angle text-xl"></i>
+                                </div>
+                                Matches
+                                <span class="bg-neon-pink text-white text-xs px-2.5 py-1 rounded-full ml-auto shadow-md">3</span>
+                            </button>
+                        </li>
+                        <li class="pt-6 mt-6 border-t-2 border-slate-100">
+                            <button onclick="switchDashboardView('settingsView')" data-target="settingsView" class="sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent">
+                                <div class="icon-box w-12 h-12 rounded-[14px] bg-slate-200 text-slate-700 flex items-center justify-center transition-all duration-300 shadow-sm border border-slate-300/50">
+                                    <i class="fa-solid fa-gear text-xl group-hover:animate-[spin_3s_linear_infinite]"></i>
+                                </div>
+                                Settings
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <section class="flex-1 flex flex-col min-w-0" id="mainContentArea">
+                
+                <!-- VIEW: FIND STOCK (Default) -->
+                <div id="findStockView" class="dashboard-view block">
+                    <!-- Bold High-Visibility Filter Bar -->
+                    <div class="bg-white rounded-[2rem] shadow-xl border-2 border-slate-200 p-6 mb-8">
+                        <div class="flex flex-col gap-6">
+                            <div class="w-full relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-lg"></i>
+                                </div>
+                                <input id="searchInput" class="block w-full pl-14 pr-6 py-4 border-4 border-slate-100 rounded-2xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-0 focus:border-fuchsia-500 font-bold text-lg transition-all shadow-inner" placeholder="Search item, location, GST..." type="search">
+                            </div>
+                            
+                            <!-- High Contrast Filters -->
+                            <div class="w-full flex flex-wrap items-center gap-3" id="categoryFilterBar">
+                                <span class="text-base font-black text-slate-900 uppercase tracking-widest mr-2"><i class="fa-solid fa-filter text-fuchsia-500"></i> Filters:</span>
+                                
+                                <button onclick="setCategory('All')" class="category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-slate-900 text-white shadow-xl shadow-slate-900/20 transition-all border-2 border-slate-900 hover:-translate-y-1" data-cat="All">All Items</button>
+                                
+                                <button onclick="setCategory('Electronics')" class="category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-white text-slate-900 border-2 border-slate-300 hover:border-fuchsia-500 hover:text-fuchsia-600 transition-all hover:-translate-y-1" data-cat="Electronics">Electronics</button>
+                                
+                                <button onclick="setCategory('Hardware')" class="category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-white text-slate-900 border-2 border-slate-300 hover:border-fuchsia-500 hover:text-fuchsia-600 transition-all hover:-translate-y-1" data-cat="Hardware">Hardware</button>
+                                
+                                <button onclick="setCategory('Apparel')" class="category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-white text-slate-900 border-2 border-slate-300 hover:border-fuchsia-500 hover:text-fuchsia-600 transition-all hover:-translate-y-1" data-cat="Apparel">Apparel</button>
+                                
+                                <button onclick="setCategory('Packaging')" class="category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-white text-slate-900 border-2 border-slate-300 hover:border-fuchsia-500 hover:text-fuchsia-600 transition-all hover:-translate-y-1" data-cat="Packaging">Packaging</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-8 flex justify-between items-end">
+                        <div>
+                            <h1 class="text-4xl font-black text-slate-900 tracking-tight">Global Marketplace</h1>
+                            <p class="text-lg font-bold text-fuchsia-600 mt-2" id="resultsCount">Loading items...</p>
+                        </div>
+                    </div>
+
+                    <!-- Main Grid Container -->
+                    <div id="inventoryGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                        <!-- Items injected via JS -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="emptyState" class="hidden flex flex-col items-center justify-center py-24 px-4 text-center bg-white rounded-[3rem] border-4 border-dashed border-slate-200 mt-6 shadow-sm">
+                        <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner border-2 border-slate-100">
+                            <i class="fa-solid fa-ghost text-5xl text-slate-300"></i>
+                        </div>
+                        <h3 class="text-3xl font-black text-slate-900">No items found</h3>
+                        <p class="text-slate-500 font-bold mt-3 text-lg max-w-md">We couldn't find any inventory matching your search or active filters.</p>
+                        <button onclick="setCategory('All'); document.getElementById('searchInput').value=''; filterInventory();" class="mt-8 px-8 py-4 bg-white border-4 border-slate-200 rounded-2xl text-slate-900 font-black hover:bg-slate-50 hover:border-fuchsia-500 transition-all shadow-md text-lg">Clear all filters</button>
+                    </div>
+                </div>
+
+                <!-- VIEW: MY INVENTORY -->
+                <div id="myInventoryView" class="dashboard-view hidden fade-in">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-4xl font-black text-slate-900 tracking-tight">My Inventory</h1>
+                        <button onclick="openAddModal()" class="px-6 py-3 rounded-xl font-black text-white bg-gradient-to-r from-orange-500 to-pink-500 hover:scale-105 transition-all shadow-lg shadow-orange-500/30">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Item
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-[2rem] shadow-xl border-2 border-slate-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b-2 border-slate-100">
+                                        <th class="py-4 px-6 font-black text-slate-500 uppercase tracking-widest text-sm">Item Details</th>
+                                        <th class="py-4 px-6 font-black text-slate-500 uppercase tracking-widest text-sm">Category</th>
+                                        <th class="py-4 px-6 font-black text-slate-500 uppercase tracking-widest text-sm">Price / Qty</th>
+                                        <th class="py-4 px-6 font-black text-slate-500 uppercase tracking-widest text-sm">Status</th>
+                                        <th class="py-4 px-6 font-black text-slate-500 uppercase tracking-widest text-sm text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myInventoryTableBody" class="divide-y divide-slate-100">
+                                    <!-- User's inventory injected here via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: REQUIREMENTS -->
+                <div id="myRequirementsView" class="dashboard-view hidden fade-in">
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-8">My Requirements</h1>
+                    <div class="grid gap-6">
+                        <div class="bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-6 flex items-center justify-between">
+                            <div>
+                                <span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-widest mb-3 inline-block">Active Search</span>
+                                <h3 class="text-2xl font-black text-slate-900">Looking for: 500kg Cotton Yarn</h3>
+                                <p class="text-slate-500 font-medium mt-1">Needed by: Next Friday • Budget: ₹45,000</p>
+                            </div>
+                            <button class="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors">Edit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: MATCHES -->
+                <div id="matchesView" class="dashboard-view hidden fade-in">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-4xl font-black text-slate-900 tracking-tight">Active Matches</h1>
+                        <span id="matchesCount" class="bg-neon-pink text-white font-black px-4 py-2 rounded-xl shadow-lg">0</span>
+                    </div>
+                    <div id="matchesContainer" class="grid gap-6">
+                        <div class="bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-8 text-center text-slate-500 font-bold">
+                            Loading matches...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: OVERVIEW / SETTINGS -->
+                <div id="overviewView" class="dashboard-view hidden fade-in">
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-8">Dashboard Overview</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-purple-600 to-fuchsia-500 rounded-[2rem] p-8 text-white shadow-xl shadow-purple-500/20 relative overflow-hidden">
+                            <div class="absolute -right-6 -top-6 text-8xl opacity-10"><i class="fa-solid fa-wallet"></i></div>
+                            <h3 class="text-lg font-bold opacity-90">Capital Recovered</h3>
+                            <p class="text-4xl font-black mt-2">₹1,45,000</p>
+                            <p class="text-sm font-bold mt-2 text-white/80"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +24% this month</p>
+                        </div>
+                        <div class="bg-white rounded-[2rem] border-2 border-slate-100 p-8 shadow-lg">
+                            <h3 class="text-lg font-bold text-slate-500">Active Listings</h3>
+                            <p class="text-4xl font-black text-slate-900 mt-2" id="activeListingsCount">0</p>
+                            <p class="text-sm font-bold mt-2 text-emerald-500"><i class="fa-solid fa-circle-check mr-1"></i> All systems nominal</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-orange-400 to-pink-500 rounded-[2rem] p-8 text-white shadow-xl shadow-orange-500/20">
+                            <h3 class="text-lg font-bold opacity-90">Eco-Impact (Waste Prevented)</h3>
+                            <p class="text-4xl font-black mt-2">1,250 kg</p>
+                            <p class="text-sm font-bold mt-2 text-white/80"><i class="fa-solid fa-leaf mr-1"></i> Excellent rating</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-[2rem] border-2 border-slate-100 p-8 shadow-lg w-full">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-2xl font-black text-slate-900">Revenue Analytics</h3>
+                            <select class="bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 font-bold text-slate-600 focus:outline-none focus:border-purple-500">
+                                <option>Last 6 Months</option>
+                                <option>This Year</option>
+                            </select>
+                        </div>
+                        <div class="h-72 w-full">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="settingsView" class="dashboard-view hidden fade-in">
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-8">Account Settings</h1>
+                    <div class="bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-8">
+                        <p class="text-xl font-bold text-slate-600">Settings panel coming soon.</p>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <div id="postItemModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity" aria-hidden="true" onclick="toggleModal('postItemModal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border-4 border-white">
+                <div class="bg-gradient-to-r from-orange-500 to-pink-500 px-8 py-6 flex justify-between items-center">
+                    <h3 id="postModalTitle" class="text-2xl font-black text-white"><i class="fa-solid fa-box-open mr-3"></i> Add Dead Stock</h3>
+                    <button onclick="toggleModal('postItemModal')" class="text-white/80 hover:text-white bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="px-8 py-8">
+                    <form id="postItemForm" class="space-y-6" onsubmit="event.preventDefault(); submitNewItem();">
+                        <input type="hidden" id="editingItemId" value="">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Item Title</label>
+                                <input type="text" id="postTitle" required class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Category</label>
+                                <select id="postCategory" required class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Hardware">Hardware</option>
+                                    <option value="Apparel">Apparel</option>
+                                    <option value="Packaging">Packaging</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Quantity</label>
+                                <input type="text" id="postQuantity" required placeholder="e.g. 500 units" class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Expected Price</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center font-black text-slate-400 text-xl pointer-events-none">₹</span>
+                                    <input type="number" id="postPrice" required placeholder="15000" min="1" class="block w-full pl-10 pr-4 py-3 border-4 border-slate-100 rounded-xl focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Shop Name</label>
+                                <input type="text" id="postShop" required value="My Business" class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">GST Number</label>
+                                <input type="text" id="postGST" required value="29AABCU9603R1Z2" class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                            </div>
+                            
+                            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Interactive Searchable State Dropdown -->
+                                <div class="relative w-full" id="stateDropdownContainer">
+                                    <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">State</label>
+                                    <div class="relative cursor-pointer">
+                                        <input type="text" id="postStateDisplay" placeholder="Search State..." autocomplete="off" 
+                                            class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors placeholder-slate-400" 
+                                            onfocus="openCustomDropdown('state')" oninput="filterCustomDropdown('state')" onclick="openCustomDropdown('state')">
+                                        <input type="hidden" id="postState" required>
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-chevron-down transition-transform duration-300" id="stateChevron"></i>
+                                        </div>
+                                    </div>
+                                    <ul id="stateOptions" class="absolute z-50 w-full bg-white border-2 border-slate-100 shadow-2xl rounded-xl mt-1 max-h-60 overflow-y-auto hidden divide-y divide-slate-50">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                                
+                                <!-- Interactive Searchable City Dropdown -->
+                                <div class="relative w-full" id="cityDropdownContainer">
+                                    <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">City</label>
+                                    <div class="relative cursor-pointer">
+                                        <input type="text" id="postCityDisplay" placeholder="Select State First..." autocomplete="off" disabled
+                                            class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors placeholder-slate-400 disabled:opacity-60 disabled:cursor-not-allowed" 
+                                            onfocus="openCustomDropdown('city')" oninput="filterCustomDropdown('city')" onclick="openCustomDropdown('city')">
+                                        <input type="hidden" id="postCity" required>
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-chevron-down transition-transform duration-300" id="cityChevron"></i>
+                                        </div>
+                                    </div>
+                                    <ul id="cityOptions" class="absolute z-50 w-full bg-white border-2 border-slate-100 shadow-2xl rounded-xl mt-1 max-h-60 overflow-y-auto hidden divide-y divide-slate-50">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide flex items-center justify-between">
+                                        Extra Details <span class="text-xs text-slate-400 normal-case">(Optional)</span>
+                                    </label>
+                                    <input type="text" id="postExtraLocation" placeholder="e.g., Near Metro Stn" class="block w-full border-4 border-slate-100 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500 font-bold text-lg bg-slate-50 transition-colors">
+                                </div>
+                            </div>
+                            
+                            <!-- Interactive Image Upload Section -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-black text-slate-700 mb-2 uppercase tracking-wide">Product Image</label>
+                                
+                                <!-- Upload Box -->
+                                <div class="flex items-center justify-center w-full" id="imageUploadBox">
+                                    <label for="postImage" class="flex flex-col items-center justify-center w-full h-40 border-4 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 hover:border-orange-500 transition-all group">
+                                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform border-2 border-slate-100">
+                                                <i class="fa-solid fa-image text-2xl text-orange-500"></i>
+                                            </div>
+                                            <p class="mb-2 text-sm text-slate-700 font-bold"><span class="font-black text-orange-500">Click to upload</span> a photo of the stock</p>
+                                            <p class="text-xs text-slate-500 font-bold">PNG, JPG, WEBP (Max 5MB)</p>
+                                        </div>
+                                        <input id="postImage" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(this)" />
+                                    </label>
+                                </div>
+                                
+                                <!-- Image Preview Container (Hidden by default) -->
+                                <div id="imagePreviewContainer" class="hidden mt-2 relative w-full h-56 rounded-xl overflow-hidden border-4 border-slate-200 shadow-inner bg-slate-100">
+                                    <img id="imagePreview" src="" class="w-full h-full object-contain">
+                                    <button type="button" onclick="removeUploadedImage()" class="absolute top-3 right-3 bg-white/90 backdrop-blur text-red-500 w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-lg border border-red-100">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-8 flex justify-end gap-4">
+                            <button type="button" onclick="toggleModal('postItemModal')" class="px-6 py-3 bg-white border-4 border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-8 py-3 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl text-white font-black hover:scale-105 shadow-xl shadow-orange-500/30 text-lg transition-transform">
+                                Post Inventory
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="productDetailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity" aria-hidden="true" onclick="toggleModal('productDetailModal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border-4 border-white">
+                <div class="flex flex-col md:flex-row h-full">
+                    <!-- Image Side -->
+                    <div class="md:w-2/5 relative bg-slate-100 min-h-[300px]">
+                        <img id="detailImage" src="" class="absolute inset-0 w-full h-full object-cover">
+                        <button onclick="toggleModal('productDetailModal')" class="absolute top-4 left-4 md:hidden bg-white/50 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center text-slate-900 border border-white">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div class="absolute top-4 right-4 bg-white text-purple-700 px-4 py-1.5 rounded-xl text-xs font-black shadow-lg uppercase border border-purple-100" id="detailCategory"></div>
+                    </div>
+                    
+                    <!-- Content Side -->
+                    <div class="md:w-3/5 p-8 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 id="detailTitle" class="text-3xl font-black text-slate-900 leading-tight"></h3>
+                            <button onclick="toggleModal('productDetailModal')" class="hidden md:flex text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-10 h-10 rounded-full items-center justify-center transition-colors">
+                                <i class="fa-solid fa-xmark text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <p id="detailPrice" class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 mb-6"></p>
+                        
+                        <div class="bg-slate-50 rounded-2xl p-5 border-2 border-slate-100 mb-6">
+                            <div class="flex items-center justify-between mb-4 pb-4 border-b-2 border-slate-200/60">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Seller</p>
+                                    <p id="detailShop" class="font-black text-lg text-slate-900"></p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="flex text-orange-400 text-sm mb-1">
+                                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-500">4.8 (Trusted Seller)</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 text-sm font-bold text-slate-700">
+                                <div><i class="fa-solid fa-boxes-stacked text-orange-500 mr-2"></i> Qty: <span id="detailQty" class="text-slate-900"></span></div>
+                                <div><i class="fa-solid fa-location-dot text-fuchsia-500 mr-2"></i> <span id="detailLocation" class="text-slate-900"></span></div>
+                                <div class="col-span-2"><i class="fa-solid fa-file-invoice text-purple-500 mr-2"></i> GST: <span id="detailGST" class="text-slate-900"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Negotiation Box -->
+                        <div class="mt-auto bg-purple-50 rounded-2xl p-5 border-2 border-purple-100">
+                            <label class="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wide">Make an Offer</label>
+                            <div class="flex gap-3">
+                                <div class="relative flex-grow">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center font-bold text-purple-400">₹</span>
+                                    <input type="number" id="offerAmount" class="block w-full pl-8 pr-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-lg bg-white transition-colors" placeholder="Propose price...">
+                                </div>
+                                <button onclick="submitOffer()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-black transition-colors shadow-lg shadow-purple-500/30 whitespace-nowrap">
+                                    Send Offer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity" aria-hidden="true" onclick="toggleModal('deleteConfirmModal')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full border-4 border-white">
+                <div class="p-8 text-center">
+                    <div class="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6 border-4 border-red-50">
+                        <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">Delete Item?</h3>
+                    <p class="text-slate-600 font-bold mb-8">Are you sure you want to remove this inventory? This action cannot be undone.</p>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="toggleModal('deleteConfirmModal')" class="px-6 py-3 bg-slate-100 rounded-xl text-slate-700 font-bold hover:bg-slate-200 transition-colors w-full">Cancel</button>
+                        <button onclick="executeDelete()" class="px-6 py-3 bg-red-500 rounded-xl text-white font-black hover:bg-red-600 shadow-lg shadow-red-500/30 transition-colors w-full">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Router / Page Management
+        function showPage(pageId) {
+            document.getElementById('landingPage').classList.add('hidden');
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('howItWorksPage').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.remove('flex');
+            
+            const target = document.getElementById(pageId);
+            if(pageId === 'dashboardPage') {
+                target.classList.remove('hidden');
+                target.classList.add('flex');
+                document.getElementById('bgCanvas').style.opacity = '0.08'; // very subtle in dashboard
+                renderInventory();
+                
+                renderMyInventory(); 
+                if(!window.chartInitialized) {
+                    initChart();
+                    window.chartInitialized = true;
+                }
+                
+                switchDashboardView('findStockView'); // Default dashboard view
+            } else {
+                target.classList.remove('hidden');
+                target.classList.add('flex');
+                document.getElementById('bgCanvas').style.opacity = '1'; // full vibrancy outside
+            }
+            window.scrollTo(0,0);
+        }
+
+        // Dashboard View Switcher
+        function switchDashboardView(viewId) {
+            // Hide all views
+            const views = document.querySelectorAll('.dashboard-view');
+            views.forEach(v => {
+                v.classList.remove('block');
+                v.classList.add('hidden');
+            });
+
+            // Show target view
+            const target = document.getElementById(viewId);
+            if(target) {
+                target.classList.remove('hidden');
+                target.classList.add('block');
+            }
+
+            // Refresh real backend matches whenever the Matches view is opened.
+            if (viewId === 'matchesView' && typeof loadBackendMatches === 'function') {
+                loadBackendMatches();
+            }
+
+            // Update active state on sidebar buttons
+            const btns = document.querySelectorAll('.sidebar-btn');
+            btns.forEach(btn => {
+                if(btn.dataset.target === viewId) {
+                    btn.className = "sidebar-btn active group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white shadow-xl shadow-fuchsia-500/30 border-2 border-fuchsia-400";
+                } else {
+                    btn.className = "sidebar-btn group w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-100 transition-all border-2 border-transparent";
+                }
+            });
+        }
+
+        // Beautiful Glowing Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            // Premium animated icons
+            const iconClass = type === 'success' ? 'fa-check text-white' : 'fa-bell text-white';
+            const iconBg = type === 'success' ? 'from-emerald-400 to-emerald-600 shadow-emerald-500/50' : 'from-fuchsia-500 to-purple-600 shadow-fuchsia-500/50';
+            const title = type === 'success' ? 'Success' : 'Notification';
+
+            // Premium Notification Styling
+            toast.className = `premium-toast rounded-[1.5rem] flex items-center gap-4 transform transition-all duration-500 scale-75 -translate-y-10 opacity-0 pointer-events-auto min-w-[320px] max-w-md relative z-50 p-4 pl-5`;
+            
+            toast.innerHTML = `
+                <div class="toast-shine"></div>
+                
+                <div class="w-12 h-12 bg-gradient-to-br ${iconBg} rounded-full flex items-center justify-center shadow-[0_0_15px_inherit] flex-shrink-0 z-10 border-2 border-white/20">
+                    <i class="fa-solid ${iconClass} text-xl drop-shadow-md"></i>
+                </div>
+                
+                <div class="flex-1 z-10 pr-4">
+                    <h4 class="text-white font-black text-sm uppercase tracking-widest opacity-90">${title}</h4>
+                    <p class="font-bold text-slate-200 text-base mt-0.5">${message}</p>
+                </div>
+                
+                <!-- Animated Progress Bar at bottom -->
+                <div class="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-orange-400 via-fuchsia-500 to-purple-500 animate-[toastProgress_4s_linear_forwards] z-20"></div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Pop-in bounce animation
+            requestAnimationFrame(() => {
+                toast.classList.remove('-translate-y-10', 'opacity-0', 'scale-75');
+                toast.classList.add('translate-y-0', 'opacity-100', 'scale-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100', 'scale-100');
+                toast.classList.add('-translate-y-10', 'opacity-0', 'scale-75');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        // Comprehensive Location Data Mapping for All of India
+        const indiaLocations = {
+            "Andaman and Nicobar Islands": ["Port Blair", "Nicobar", "South Andaman", "North and Middle Andaman"],
+            "Andhra Pradesh": ["Adoni", "Amaravati", "Anantapur", "Chandragiri", "Chittoor", "Dowlaiswaram", "Eluru", "Guntur", "Kadapa", "Kakinada", "Kurnool", "Machilipatnam", "Nagarjunako", "Rajahmundry", "Srikakulam", "Tirupati", "Vijayawada", "Visakhapatnam", "Vizianagaram", "Yemmiganur"],
+            "Arunachal Pradesh": ["Itanagar", "Tawang", "Ziro", "Pasighat", "Roing", "Tezu", "Bomdila"],
+            "Assam": ["Bongaigaon", "Dhuburi", "Dibrugarh", "Dispur", "Guwahati", "Jorhat", "Nagaon", "Sivasagar", "Silchar", "Tezpur", "Tinsukia", "Haflong"],
+            "Bihar": ["Ara", "Barauni", "Begusarai", "Bettiah", "Bhagalpur", "Bihar Sharif", "Bodh Gaya", "Buxar", "Chapra", "Darbhanga", "Dehri", "Gaya", "Hajipur", "Katihar", "Madhubani", "Motihari", "Munger", "Muzaffarpur", "Patna", "Purnia", "Saharsa", "Samastipur", "Sasaram", "Sitamarhi", "Siwan"],
+            "Chandigarh": ["Chandigarh"],
+            "Chhattisgarh": ["Ambikapur", "Bhilai", "Bilaspur", "Dhamtari", "Durg", "Jagdalpur", "Raipur", "Rajnandgaon", "Korba", "Raigarh"],
+            "Dadra and Nagar Haveli and Daman and Diu": ["Daman", "Diu", "Silvassa"],
+            "Delhi": ["New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi", "Central Delhi", "Shahdara", "Rohini"],
+            "Goa": ["Madgaon", "Panaji", "Marmagao", "Vasco da Gama", "Mapusa", "Ponda"],
+            "Gujarat": ["Ahmedabad", "Amreli", "Anand", "Bhavnagar", "Bhuj", "Dwarka", "Gandhinagar", "Godhra", "Jamnagar", "Junagadh", "Kandla", "Khambhat", "Kheda", "Mahesana", "Morbi", "Nadiad", "Navsari", "Okha", "Palanpur", "Patan", "Porbandar", "Rajkot", "Surat", "Surendranagar", "Valsad", "Veraval"],
+            "Haryana": ["Ambala", "Bhiwani", "Faridabad", "Gurugram", "Hansi", "Hisar", "Jind", "Kaithal", "Karnal", "Kurukshetra", "Panipat", "Pehowa", "Rewari", "Rohtak", "Sirsa", "Sonipat", "Panchkula"],
+            "Himachal Pradesh": ["Bilaspur", "Chamba", "Dalhousie", "Dharmshala", "Hamirpur", "Kangra", "Kullu", "Mandi", "Nahan", "Shimla", "Una", "Solan", "Manali"],
+            "Jammu and Kashmir": ["Anantnag", "Baramula", "Doda", "Gulmarg", "Jammu", "Kathua", "Punch", "Rajouri", "Srinagar", "Udhampur", "Pahalgam"],
+            "Jharkhand": ["Bokaro", "Chaibasa", "Deoghar", "Dhanbad", "Dumka", "Giridih", "Hazaribag", "Jamshedpur", "Jharia", "Rajmahal", "Ranchi", "Saraikela", "Hazaribagh"],
+            "Karnataka": ["Badami", "Ballari", "Bengaluru", "Belagavi", "Bhadravati", "Bidar", "Chikkamagaluru", "Chitradurga", "Davangere", "Halebid", "Hassan", "Hubballi-Dharwad", "Kalaburagi", "Kolar", "Madikeri", "Mandya", "Mangaluru", "Mysuru", "Raichur", "Shivamogga", "Shrirangapattana", "Tumakuru", "Vijayapura", "Udupi"],
+            "Kerala": ["Alappuzha", "Badagara", "Idukki", "Kannur", "Kochi", "Kollam", "Kottayam", "Kozhikode", "Mattancheri", "Palakkad", "Pathanamthitta", "Ponnani", "Thiruvananthapuram", "Thrissur", "Wayanad"],
+            "Ladakh": ["Kargil", "Leh"],
+            "Lakshadweep": ["Agatti", "Amini", "Andrott", "Kavaratti", "Minicoy"],
+            "Madhya Pradesh": ["Balaghat", "Barwani", "Betul", "Bhind", "Bhopal", "Burhanpur", "Chhatarpur", "Chhindwara", "Damoh", "Datia", "Dewas", "Dhar", "Guna", "Gwalior", "Hoshangabad", "Indore", "Itarsi", "Jabalpur", "Jhabua", "Khajuraho", "Khandwa", "Khargone", "Mandla", "Mandsaur", "Morena", "Neemuch", "Panna", "Raisen", "Rajgarh", "Ratlam", "Rewa", "Sagar", "Satna", "Sehore", "Seoni", "Shahdol", "Shajapur", "Shivpuri", "Ujjain", "Vidisha"],
+            "Maharashtra": ["Ahmadnagar", "Akola", "Amravati", "Aurangabad", "Bhandara", "Bhusawal", "Bid", "Buldhana", "Chandrapur", "Dhule", "Jalgaon", "Kalyan", "Kolhapur", "Mahabaleshwar", "Malegaon", "Mumbai", "Nagpur", "Nanded", "Nashik", "Osmanabad", "Pandharpur", "Parbhani", "Pune", "Ratnagiri", "Sangli", "Satara", "Solapur", "Thane", "Ulhasnagar", "Vasai-Virar", "Wardha", "Yavatmal", "Navi Mumbai"],
+            "Manipur": ["Imphal", "Churachandpur", "Bishnupur", "Thoubal", "Senapati"],
+            "Meghalaya": ["Cherrapunji", "Shillong", "Tura", "Jowai"],
+            "Mizoram": ["Aizawl", "Lunglei", "Champhai"],
+            "Nagaland": ["Kohima", "Mon", "Phek", "Wokha", "Zunheboto", "Dimapur", "Mokokchung"],
+            "Odisha": ["Balangir", "Baleshwar", "Baripada", "Bhubaneshwar", "Brahmapur", "Cuttack", "Dhenkanal", "Kendujhar", "Konark", "Koraput", "Paradip", "Puri", "Sambalpur", "Rourkela"],
+            "Puducherry": ["Karaikal", "Mahe", "Puducherry", "Yanam"],
+            "Punjab": ["Amritsar", "Batala", "Faridkot", "Firozpur", "Gurdaspur", "Hoshiarpur", "Jalandhar", "Kapurthala", "Ludhiana", "Pathankot", "Patiala", "Phagwara", "Rupnagar", "Sangrur", "Mohali", "Bhatinda"],
+            "Rajasthan": ["Abu", "Ajmer", "Alwar", "Amer", "Barmer", "Beawar", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittaurgarh", "Churu", "Dhaulpur", "Dungarpur", "Ganganagar", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalor", "Jhalawar", "Jhunjhunu", "Jodhpur", "Kishangarh", "Kota", "Nagaur", "Pali", "Pushkar", "Sawai Madhopur", "Sikar", "Sirohi", "Tonk", "Udaipur"],
+            "Sikkim": ["Gangtok", "Gyalshing", "Lachung", "Mangan", "Namchi"],
+            "Tamil Nadu": ["Chengalpattu", "Chennai", "Chidambaram", "Coimbatore", "Cuddalore", "Dharmapuri", "Dindigul", "Erode", "Kanchipuram", "Kanyakumari", "Kodaikanal", "Kumbakonam", "Madurai", "Nagappattinam", "Nagercoil", "Pudukkottai", "Ramanathapuram", "Salem", "Thanjavur", "Tiruchirappalli", "Tirunelveli", "Tiruppur", "Tuticorin", "Udhagamandalam", "Vellore", "Hosur"],
+            "Telangana": ["Hyderabad", "Karimnagar", "Khammam", "Mahbubnagar", "Nizamabad", "Sangareddi", "Warangal", "Secunderabad", "Suryapet"],
+            "Tripura": ["Agartala", "Dharmanagar", "Udaipur"],
+            "Uttar Pradesh": ["Agra", "Aligarh", "Amroha", "Ayodhya", "Azamgarh", "Bahraich", "Ballia", "Banda", "Bara Banki", "Bareilly", "Basti", "Bijnor", "Budaun", "Bulandshahr", "Deoria", "Etah", "Etawah", "Farrukhabad", "Fatehpur", "Ghaziabad", "Ghazipur", "Gonda", "Gorakhpur", "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj", "Kanpur", "Lakhimpur", "Lalitpur", "Lucknow", "Mainpuri", "Mathura", "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Prayagraj", "Rae Bareli", "Rampur", "Saharanpur", "Sambhal", "Shahjahanpur", "Sitapur", "Sultanpur", "Varanasi", "Noida", "Greater Noida"],
+            "Uttarakhand": ["Almora", "Dehradun", "Haridwar", "Mussoorie", "Nainital", "Pithoragarh", "Rishikesh", "Roorkee", "Haldwani"],
+            "West Bengal": ["Alipore", "Asansol", "Baharampur", "Bally", "Balurghat", "Bankura", "Baranagar", "Barasat", "Barrackpore", "Basirhat", "Bhatpara", "Bishnupur", "Burdwan", "Chandernagore", "Darjeeling", "Diamond Harbour", "Dum Dum", "Durgapur", "Halisahar", "Haora", "Hugli", "Jalpaiguri", "Kalimpong", "Kharagpur", "Cooch Behar", "Kolkata", "Krishnanagar", "Malda", "Midnapore", "Murshidabad", "Purulia", "Raiganj", "Santipur", "Siliguri", "Tamluk", "Howrah"]
+        };
+
+        function initLocations() {
+            const stateOptions = document.getElementById('stateOptions');
+            const states = Object.keys(indiaLocations).sort();
+            
+            stateOptions.innerHTML = states.map(state => `
+                <li class="px-5 py-3 hover:bg-fuchsia-50 hover:text-fuchsia-600 font-bold text-slate-700 cursor-pointer transition-colors" 
+                    onclick="selectCustomLocation('state', '${state}')">${state}</li>
+            `).join('');
+        }
+
+        function openCustomDropdown(type) {
+            const ul = document.getElementById(`${type}Options`);
+            const chevron = document.getElementById(`${type}Chevron`);
+            
+            // Close the other one
+            const otherType = type === 'state' ? 'city' : 'state';
+            document.getElementById(`${otherType}Options`).classList.add('hidden');
+            document.getElementById(`${otherType}Chevron`).classList.remove('rotate-180');
+            
+            // Toggle this one
+            ul.classList.remove('hidden');
+            chevron.classList.add('rotate-180');
+            filterCustomDropdown(type); // Reset filter on open
+        }
+
+        function filterCustomDropdown(type) {
+            const input = document.getElementById(`post${type.charAt(0).toUpperCase() + type.slice(1)}Display`);
+            const filter = input.value.toLowerCase();
+            const ul = document.getElementById(`${type}Options`);
+            const li = ul.getElementsByTagName('li');
+            
+            let hasVisible = false;
+            for (let i = 0; i < li.length; i++) {
+                const txtValue = li[i].textContent || li[i].innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    li[i].style.display = "";
+                    hasVisible = true;
+                } else {
+                    li[i].style.display = "none";
+                }
+            }
+            
+            if(!hasVisible && filter.length > 0) {
+                if(!document.getElementById(`no${type}Found`)) {
+                    ul.innerHTML += `<li id="no${type}Found" class="px-5 py-3 text-slate-400 font-bold italic">No results found</li>`;
+                }
+            } else {
+                const noFound = document.getElementById(`no${type}Found`);
+                if(noFound) noFound.remove();
+            }
+        }
+
+        function selectCustomLocation(type, value) {
+            // Set values
+            document.getElementById(`post${type.charAt(0).toUpperCase() + type.slice(1)}`).value = value;
+            document.getElementById(`post${type.charAt(0).toUpperCase() + type.slice(1)}Display`).value = value;
+            
+            // Close dropdown
+            document.getElementById(`${type}Options`).classList.add('hidden');
+            document.getElementById(`${type}Chevron`).classList.remove('rotate-180');
+            
+            // If state was selected, populate cities
+            if(type === 'state') {
+                const cityDisplay = document.getElementById('postCityDisplay');
+                const cityHidden = document.getElementById('postCity');
+                const cityUl = document.getElementById('cityOptions');
+                
+                cityDisplay.value = '';
+                cityDisplay.placeholder = 'Search City...';
+                cityHidden.value = '';
+                cityDisplay.disabled = false;
+                
+                const cities = indiaLocations[value].sort();
+                cityUl.innerHTML = cities.map(city => `
+                    <li class="px-5 py-3 hover:bg-orange-50 hover:text-orange-600 font-bold text-slate-700 cursor-pointer transition-colors" 
+                        onclick="selectCustomLocation('city', '${city}')">${city}</li>
+                `).join('');
+            }
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#stateDropdownContainer')) {
+                document.getElementById('stateOptions')?.classList.add('hidden');
+                document.getElementById('stateChevron')?.classList.remove('rotate-180');
+            }
+            if (!e.target.closest('#cityDropdownContainer')) {
+                document.getElementById('cityOptions')?.classList.add('hidden');
+                document.getElementById('cityChevron')?.classList.remove('rotate-180');
+            }
+        });
+
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                void modal.offsetWidth; 
+                modal.querySelector('.inline-block').classList.add('modal-enter-active');
+            } else {
+                modal.querySelector('.inline-block').classList.remove('modal-enter-active');
+                setTimeout(() => modal.classList.add('hidden'), 250);
+            }
+        }
+
+        // 12 Mock Data Items
+        let currentCategory = 'All';
+        let searchQuery = '';
+        let MOCK_INVENTORY = [
+            { id: 1, title: 'Surplus Microcontrollers ESP32', category: 'Electronics', quantity: '500 units', expected_price: 45000, shop_name: 'ElectroHub Spares', gst_number: '29AABCU9603R1Z2', location: 'Bengaluru, KA', image_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 2, title: 'Industrial Grade Ball Bearings', category: 'Hardware', quantity: '100 boxes', expected_price: 12500, shop_name: 'MechWorks Ind.', gst_number: '27AADCM3933E1Z4', location: 'Pune, MH', image_url: 'https://images.unsplash.com/photo-1586864387789-228af816c194?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 3, title: 'Unused Cotton Denim Rolls', category: 'Apparel', quantity: '1200 meters', expected_price: 85000, shop_name: 'TexStyle Fabrics', gst_number: '24AACCT1245G1Z1', location: 'Surat, GJ', image_url: 'https://images.unsplash.com/photo-1542272201-b1ca555f8505?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 4, title: 'Corrugated Cardboard Boxes', category: 'Packaging', quantity: '2000 units', expected_price: 5500, shop_name: 'PackPro India', gst_number: '27BBBDP1122Q1Z8', location: 'Mumbai, MH', image_url: 'https://images.unsplash.com/photo-1606161290886-c4391e921d7b?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 5, title: 'LED Display Panels 7-inch', category: 'Electronics', quantity: '150 units', expected_price: 32000, shop_name: 'VisionTech B2B', gst_number: '33BBCCU9603R1Z2', location: 'Chennai, TN', image_url: 'https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 6, title: 'Heavy Duty Steel Wrenches', category: 'Hardware', quantity: '350 pcs', expected_price: 18000, shop_name: 'BuildRight Tools', gst_number: '07AADCM3933E1Z4', location: 'Delhi, DL', image_url: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 7, title: 'Polyester Thread Cones', category: 'Apparel', quantity: '500 kg', expected_price: 42000, shop_name: 'YarnMasters', gst_number: '09AACCT1245G1Z1', location: 'Kanpur, UP', image_url: 'https://images.unsplash.com/photo-1605289982774-9a6fef564df8?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 8, title: 'Bubble Wrap Rolls (100m)', category: 'Packaging', quantity: '50 rolls', expected_price: 15000, shop_name: 'SafePack Logistics', gst_number: '32BBBDP1122Q1Z8', location: 'Kochi, KL', image_url: 'https://images.unsplash.com/photo-1569420844781-a67b43c683b7?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 9, title: 'Capacitors & Resistors Lot', category: 'Electronics', quantity: '10,000 pcs', expected_price: 8500, shop_name: 'CircuitCity Wholesalers', gst_number: '36AABCU9603R1Z2', location: 'Hyderabad, TS', image_url: 'https://images.unsplash.com/photo-1598961726053-9f584e0c4515?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 10, title: 'Brass Door Hinges', category: 'Hardware', quantity: '800 pairs', expected_price: 24000, shop_name: 'DecorFittings', gst_number: '08AADCM3933E1Z4', location: 'Jaipur, RJ', image_url: 'https://images.unsplash.com/photo-1622372551525-4c0716616010?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 11, title: 'Export Surplus T-Shirts', category: 'Apparel', quantity: '1500 pieces', expected_price: 112500, shop_name: 'GarmentHub', gst_number: '33AACCT1245G1Z1', location: 'Tirupur, TN', image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80', is_mine: false },
+            { id: 12, title: 'Biodegradable Mailer Bags', category: 'Packaging', quantity: '5000 units', expected_price: 12500, shop_name: 'EcoPack India', gst_number: '29BBBDP1122Q1Z8', location: 'Mysuru, KA', image_url: 'https://images.unsplash.com/photo-1628189689445-5d97ff7b0682?auto=format&fit=crop&w=600&q=80', is_mine: false }
+        ];
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = "category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-slate-900 text-white shadow-xl shadow-slate-900/20 transition-all border-2 border-slate-900 hover:-translate-y-1";
+                } else {
+                    btn.className = "category-btn px-6 py-3.5 rounded-2xl text-base font-black bg-white text-slate-900 border-2 border-slate-300 hover:border-fuchsia-500 hover:text-fuchsia-600 transition-all hover:-translate-y-1";
+                }
+            });
+            filterInventory();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            filterInventory();
+        });
+
+        function filterInventory() {
+            const grid = document.getElementById('inventoryGrid');
+            const empty = document.getElementById('emptyState');
+            const count = document.getElementById('resultsCount');
+            
+            const filtered = MOCK_INVENTORY.filter(item => {
+                const matchCat = currentCategory === 'All' || item.category === currentCategory;
+                const matchSearch = !searchQuery || 
+                    item.title.toLowerCase().includes(searchQuery) || 
+                    item.location.toLowerCase().includes(searchQuery) ||
+                    item.gst_number.toLowerCase().includes(searchQuery);
+                return matchCat && matchSearch;
+            });
+
+            grid.innerHTML = '';
+            count.textContent = `Showing ${filtered.length} available items`;
+
+            if (filtered.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                filtered.forEach(item => {
+                    const price = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.expected_price);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-purple-900/20 transition-all duration-300 flex flex-col group border-4 border-slate-100 hover:border-fuchsia-200';
+                    card.innerHTML = `
+                        <div class="h-64 w-full relative overflow-hidden bg-slate-100 flex-shrink-0 p-3 cursor-pointer" onclick="openProductDetails(${item.id})">
+                            <img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover rounded-3xl group-hover:scale-110 transition-transform duration-700">
+                            <div class="absolute top-6 left-6 bg-white text-purple-700 px-5 py-2 rounded-xl text-xs font-black shadow-xl tracking-widest uppercase border-2 border-purple-100">
+                                ${item.category}
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col flex-grow">
+                            <h3 class="font-black text-2xl text-slate-900 leading-tight mb-3 break-words cursor-pointer hover:text-fuchsia-600 transition-colors" onclick="openProductDetails(${item.id})">${item.title}</h3>
+                            <p class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 mb-6 drop-shadow-sm">${price}</p>
+                            
+                            <div class="space-y-4 mt-auto text-base text-slate-700 bg-slate-50 p-5 rounded-2xl border-2 border-slate-100 shadow-inner">
+                                <div class="flex items-start gap-3 break-words">
+                                    <div class="w-6 flex justify-center mt-1"><i class="fa-solid fa-boxes-stacked text-orange-500 text-lg"></i></div>
+                                    <div><span class="font-black text-slate-900">Qty:</span> ${item.quantity}</div>
+                                </div>
+                                <div class="flex items-start gap-3 break-words">
+                                    <div class="w-6 flex justify-center mt-1"><i class="fa-solid fa-location-dot text-fuchsia-500 text-lg"></i></div>
+                                    <div class="font-bold">${item.location}</div>
+                                </div>
+                                <div class="flex items-start gap-3 break-words">
+                                    <div class="w-6 flex justify-center mt-1"><i class="fa-solid fa-store text-purple-500 text-lg"></i></div>
+                                    <div>
+                                        <span class="font-black block text-slate-900">${item.shop_name}</span>
+                                        <span class="text-sm font-bold text-slate-500">GST: ${item.gst_number}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 pt-0 mt-auto">
+                            <button onclick="openProductDetails(${item.id})" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg transition-all shadow-xl shadow-slate-900/30 flex justify-center items-center gap-3 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-fuchsia-500 group-hover:to-orange-500">
+                                View & Negotiate <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function renderInventory() {
+            filterInventory();
+        }
+
+        let currentDetailId = null;
+
+        function openProductDetails(id) {
+            const item = MOCK_INVENTORY.find(i => i.id === id);
+            if(item) {
+                currentDetailId = id;
+                document.getElementById('detailImage').src = item.image_url;
+                document.getElementById('detailCategory').textContent = item.category;
+                document.getElementById('detailTitle').textContent = item.title;
+                document.getElementById('detailPrice').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.expected_price);
+                document.getElementById('detailShop').textContent = item.shop_name;
+                document.getElementById('detailQty').textContent = item.quantity;
+                document.getElementById('detailLocation').textContent = item.location;
+                document.getElementById('detailGST').textContent = item.gst_number;
+                document.getElementById('offerAmount').value = ''; // Reset input
+                toggleModal('productDetailModal');
+            }
+        }
+
+        function submitOffer() {
+            const amount = document.getElementById('offerAmount').value;
+            if(!amount || amount <= 0) {
+                showToast('Please enter a valid offer amount.', 'error');
+                return;
+            }
+            toggleModal('productDetailModal');
+            showToast(`Offer of ₹${amount} sent to the seller!`, 'success');
+        }
+
+        function renderMyInventory() {
+            const tbody = document.getElementById('myInventoryTableBody');
+            const myItems = MOCK_INVENTORY.filter(item => item.is_mine);
+            
+            document.getElementById('activeListingsCount').textContent = myItems.length;
+
+            if(myItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-500 font-bold text-lg"><i class="fa-solid fa-box-open text-4xl text-slate-300 mb-3 block"></i>You haven't listed any items yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            myItems.forEach(item => {
+                const price = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.expected_price);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 border-b border-slate-100">
+                        <div class="flex items-center gap-4">
+                            <img src="${item.image_url}" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+                            <span class="font-black text-slate-900">${item.title}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 border-b border-slate-100 font-bold text-slate-600">${item.category}</td>
+                    <td class="py-4 px-6 border-b border-slate-100">
+                        <div class="flex flex-col gap-1">
+                            <span class="font-black text-slate-900 text-lg">${price}</span>
+                            <span class="font-black text-orange-600 text-base flex items-center gap-1.5">
+                                <i class="fa-solid fa-boxes-stacked opacity-80 text-sm"></i> ${item.quantity}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 border-b border-slate-100">
+                        <span class="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">Active</span>
+                    </td>
+                    <td class="py-4 px-6 border-b border-slate-100 text-right">
+                        <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-fuchsia-600 transition-colors mr-3"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="promptDelete(${item.id})" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            // Create Gradient
+            let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(168, 85, 247, 0.5)'); // Purple-500
+            gradient.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Revenue Recovered (₹)',
+                        data: [15000, 32000, 28000, 54000, 42000, 85000],
+                        borderColor: '#a855f7', // Purple-500
+                        backgroundColor: gradient,
+                        borderWidth: 4,
+                        tension: 0.4, // Smooth curves
+                        fill: true,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#a855f7',
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            grid: { borderDash: [5, 5], color: '#f1f5f9' }, // slate-100
+                            ticks: { font: { family: 'Outfit', weight: 'bold' }, color: '#64748b' } // slate-500
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Outfit', weight: 'bold' }, color: '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Image Upload Logic ---
+        let currentUploadedImage = null;
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentUploadedImage = e.target.result; // This converts the image to a base64 Data URL
+                    document.getElementById('imagePreview').src = currentUploadedImage;
+                    document.getElementById('imageUploadBox').classList.add('hidden');
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeUploadedImage() {
+            document.getElementById('postImage').value = '';
+            currentUploadedImage = null;
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('imageUploadBox').classList.remove('hidden');
+        }
+        // --------------------------
+
+        function openAddModal() {
+            document.getElementById('postItemForm').reset();
+            removeUploadedImage();
+            document.getElementById('editingItemId').value = '';
+            document.getElementById('postModalTitle').innerHTML = '<i class="fa-solid fa-box-open mr-3"></i> Add Dead Stock';
+            const submitBtn = document.querySelector('#postItemForm button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = 'Post Inventory';
+            
+            // Reset dropdown visuals
+            document.getElementById('postStateDisplay').value = '';
+            document.getElementById('postCityDisplay').value = '';
+            document.getElementById('postCityDisplay').disabled = true;
+            
+            toggleModal('postItemModal');
+        }
+
+        function editItem(id) {
+            const item = MOCK_INVENTORY.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('editingItemId').value = id;
+            document.getElementById('postTitle').value = item.title;
+            document.getElementById('postCategory').value = item.category;
+            document.getElementById('postQuantity').value = item.quantity;
+            document.getElementById('postPrice').value = item.expected_price;
+            document.getElementById('postShop').value = item.shop_name;
+            document.getElementById('postGST').value = item.gst_number;
+
+            // Handle location parsing: splits format "City, State (Extra)" back into separate fields
+            const locParts = item.location.match(/^(.*?),\s*(.*?)(?:\s*\((.*?)\))?$/);
+            if (locParts) {
+                const city = locParts[1];
+                const state = locParts[2];
+                const extra = locParts[3] || '';
+                
+                document.getElementById('postState').value = state;
+                document.getElementById('postStateDisplay').value = state;
+                
+                const cityDisplay = document.getElementById('postCityDisplay');
+                const cityUl = document.getElementById('cityOptions');
+                cityDisplay.disabled = false;
+                
+                // Regenerate city list for the selected state
+                if (indiaLocations[state]) {
+                    const cities = indiaLocations[state].sort();
+                    cityUl.innerHTML = cities.map(c => `
+                        <li class="px-5 py-3 hover:bg-orange-50 hover:text-orange-600 font-bold text-slate-700 cursor-pointer transition-colors" 
+                            onclick="selectCustomLocation('city', '${c}')">${c}</li>
+                    `).join('');
+                }
+                
+                document.getElementById('postCity').value = city;
+                document.getElementById('postCityDisplay').value = city;
+                document.getElementById('postExtraLocation').value = extra;
+            } else {
+                // Fallback
+                document.getElementById('postExtraLocation').value = item.location;
+            }
+
+            // Restore image
+            if (item.image_url) {
+                currentUploadedImage = item.image_url;
+                document.getElementById('imagePreview').src = item.image_url;
+                document.getElementById('imageUploadBox').classList.add('hidden');
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            }
+
+            document.getElementById('postModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square mr-3"></i> Edit Inventory';
+            const submitBtn = document.querySelector('#postItemForm button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = 'Update Item';
+            
+            toggleModal('postItemModal');
+        }
+
+        let itemToDeleteId = null;
+        function promptDelete(id) {
+            itemToDeleteId = id;
+            toggleModal('deleteConfirmModal');
+        }
+
+        function executeDelete() {
+            if (itemToDeleteId !== null) {
+                MOCK_INVENTORY = MOCK_INVENTORY.filter(i => i.id !== itemToDeleteId);
+                itemToDeleteId = null;
+                toggleModal('deleteConfirmModal');
+                showToast('Item deleted successfully!', 'success');
+                renderMyInventory();
+                filterInventory();
+            }
+        }
+
+        function submitNewItem() {
+            // Compile full location string from dropdowns and optional input
+            const state = document.getElementById('postState').value;
+            const city = document.getElementById('postCity').value;
+            
+            if(!state || !city) {
+                showToast('Please select both a State and City from the dropdown.', 'error');
+                return;
+            }
+
+            const extra = document.getElementById('postExtraLocation').value;
+            const fullLocation = extra ? `${city}, ${state} (${extra})` : `${city}, ${state}`;
+
+            // Use the locally uploaded image, or a realistic fallback
+            const finalImage = currentUploadedImage || 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=600&q=80';
+
+            const editingId = document.getElementById('editingItemId').value;
+
+            if (editingId) {
+                // Update existing item
+                const index = MOCK_INVENTORY.findIndex(i => i.id == editingId);
+                if (index !== -1) {
+                    MOCK_INVENTORY[index].title = document.getElementById('postTitle').value;
+                    MOCK_INVENTORY[index].category = document.getElementById('postCategory').value;
+                    MOCK_INVENTORY[index].quantity = document.getElementById('postQuantity').value;
+                    MOCK_INVENTORY[index].expected_price = parseFloat(document.getElementById('postPrice').value);
+                    MOCK_INVENTORY[index].shop_name = document.getElementById('postShop').value;
+                    MOCK_INVENTORY[index].gst_number = document.getElementById('postGST').value;
+                    MOCK_INVENTORY[index].location = fullLocation;
+                    MOCK_INVENTORY[index].image_url = finalImage;
+                }
+                showToast('Item updated successfully!');
+            } else {
+                // Create new item
+                const newItem = {
+                    id: Date.now(),
+                    title: document.getElementById('postTitle').value,
+                    category: document.getElementById('postCategory').value,
+                    quantity: document.getElementById('postQuantity').value,
+                    expected_price: parseFloat(document.getElementById('postPrice').value),
+                    shop_name: document.getElementById('postShop').value,
+                    gst_number: document.getElementById('postGST').value,
+                    location: fullLocation,
+                    image_url: finalImage,
+                    is_mine: true
+                };
+                MOCK_INVENTORY.unshift(newItem); 
+                showToast('Inventory successfully added to marketplace!');
+            }
+
+            toggleModal('postItemModal');
+            document.getElementById('postItemForm').reset();
+            removeUploadedImage(); 
+            document.getElementById('editingItemId').value = '';
+            
+            // Re-render views
+            setCategory('All');
+            renderMyInventory();
+        }
+
+        function init3DBackground() {
+            const canvas = document.getElementById('bgCanvas');
+            const scene = new THREE.Scene();
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+
+            const boxes = [];
+            const boxGeo = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+            
+            // Ultra Vibrant Neon Colors
+            const materials = [
+                new THREE.MeshPhysicalMaterial({ color: 0xff0055, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.5 }), 
+                new THREE.MeshPhysicalMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.5 }), 
+                new THREE.MeshPhysicalMaterial({ color: 0xbc13fe, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.5 }), 
+                new THREE.MeshPhysicalMaterial({ color: 0xccff00, transparent: true, opacity: 0.8, wireframe: true }), 
+                new THREE.MeshPhysicalMaterial({ color: 0xff4d00, transparent: true, opacity: 0.85, roughness: 0.2 }) 
+            ];
+
+            for (let i = 0; i < 50; i++) {
+                const material = materials[Math.floor(Math.random() * materials.length)];
+                const mesh = new THREE.Mesh(boxGeo, material);
+                
+                mesh.position.x = (Math.random() - 0.5) * 80;
+                mesh.position.y = (Math.random() - 0.5) * 80;
+                mesh.position.z = (Math.random() - 0.5) * 50 - 10; 
+                
+                mesh.rotation.x = Math.random() * Math.PI;
+                mesh.rotation.y = Math.random() * Math.PI;
+                
+                const scale = Math.random() * 1.5 + 0.5;
+                mesh.scale.set(scale, scale, scale);
+
+                mesh.userData = {
+                    rotSpeedX: (Math.random() - 0.5) * 0.02,
+                    rotSpeedY: (Math.random() - 0.5) * 0.02,
+                    floatSpeed: (Math.random() * 0.03) + 0.01,
+                    initialY: mesh.position.y,
+                    offset: Math.random() * Math.PI * 2
+                };
+
+                scene.add(mesh);
+                boxes.push(mesh);
+            }
+
+            // High Sensitivity Mouse Tracking
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetX = 0;
+            let targetY = 0;
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            document.addEventListener('mousemove', (event) => {
+                // Multiplier increased significantly for higher sensitivity
+                mouseX = (event.clientX - windowHalfX) * 0.15;
+                mouseY = (event.clientY - windowHalfY) * 0.15;
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Animation Loop
+            let time = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+                time += 0.01;
+
+                // Fast camera movement for parallax
+                targetX = mouseX * 0.8;
+                targetY = mouseY * 0.8;
+                camera.position.x += (targetX - camera.position.x) * 0.1;
+                camera.position.y += (-targetY - camera.position.y) * 0.1;
+                camera.lookAt(scene.position);
+
+                boxes.forEach(box => {
+                    box.rotation.x += box.userData.rotSpeedX;
+                    box.rotation.y += box.userData.rotSpeedY;
+                    box.position.y = box.userData.initialY + Math.sin(time * box.userData.floatSpeed + box.userData.offset) * 3;
+                });
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            init3DBackground();
+            initLocations(); // Initialize dropdowns on load
+        });
+
+    </script>
+
+    <script>
+        // ================= STOCKSURGE BACKEND INTEGRATION =================
+        let currentUser = JSON.parse(localStorage.getItem('stocksurgeUser') || 'null');
+
+        function apiHeaders() {
+            return { 'Content-Type': 'application/json' };
+        }
+
+        function saveCurrentUser(user) {
+            currentUser = user;
+            localStorage.setItem('stocksurgeUser', JSON.stringify(user));
+        }
+
+        function clearCurrentUser() {
+            currentUser = null;
+            localStorage.removeItem('stocksurgeUser');
+        }
+
+        async function loginToBackend(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            if (!email || !password) {
+                showToast('Please enter email and password.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/users/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+                    { method: 'POST' }
+                );
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Invalid email or password');
+                }
+
+                saveCurrentUser(data);
+                showPage('dashboardPage');
+                showToast(`Welcome back, ${data.name}!`, 'success');
+                await loadBackendInventory();
+                await loadBackendRequirements();
+                await loadBackendMatches();
+            } catch (error) {
+                showToast(error.message || 'Login failed.', 'error');
+            }
+        }
+
+        async function loadBackendInventory() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/inventory`);
+                const data = await response.json().catch(() => []);
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Could not load inventory.');
+                }
+
+                MOCK_INVENTORY = Array.isArray(data) ? data.map(mapBackendInventory) : [];
+                filterInventory();
+                renderMyInventory();
+            } catch (error) {
+                console.error('Inventory load error:', error);
+                showToast(error.message || 'Could not load inventory.', 'error');
+            }
+        }
+
+        function mapBackendInventory(item) {
+            return {
+                id: item.id,
+                title: item.productName || '',
+                category: item.category || '',
+                description: item.description || '',
+                quantity: item.quantity ?? 0,
+                expected_price: item.pricePerUnit ?? 0,
+                shop_name: item.seller?.name || '',
+                gst_number: '',
+                location: item.location || '',
+                image_url: item.imageUrl || 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=600&q=80',
+                conditionStatus: item.conditionStatus || '',
+                status: item.status || 'ACTIVE',
+                seller_id: item.seller?.id,
+                is_mine: !!currentUser && item.seller?.id === currentUser.id
+            };
+        }
+
+        async function saveInventoryToBackend() {
+            if (!currentUser || !currentUser.id) {
+                showToast('Please login first.', 'error');
+                showPage('loginPage');
+                return;
+            }
+
+            const state = document.getElementById('postState').value;
+            const city = document.getElementById('postCity').value;
+
+            if (!state || !city) {
+                showToast('Please select both a State and City from the dropdown.', 'error');
+                return;
+            }
+
+            const title = document.getElementById('postTitle').value.trim();
+            const category = document.getElementById('postCategory').value.trim();
+            const quantity = Number(document.getElementById('postQuantity').value);
+            const price = Number(document.getElementById('postPrice').value);
+
+            if (!title || !category || !Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(price) || price < 0) {
+                showToast('Please enter valid inventory details.', 'error');
+                return;
+            }
+
+            const extra = document.getElementById('postExtraLocation').value.trim();
+            const fullLocation = extra ? `${city}, ${state} (${extra})` : `${city}, ${state}`;
+            const editingId = document.getElementById('editingItemId').value;
+
+            // The current backend stores imageUrl as a String. Local file uploads are previewed
+            // in the UI but are not uploaded to a file server. Keep only an existing URL here.
+            const imageValue = (currentUploadedImage && /^https?:\/\//i.test(currentUploadedImage))
+                ? currentUploadedImage
+                : '';
+
+            const payload = {
+                productName: title,
+                category: category,
+                description: '',
+                quantity: quantity,
+                conditionStatus: 'GOOD',
+                pricePerUnit: price,
+                location: fullLocation,
+                imageUrl: imageValue,
+                status: 'ACTIVE'
+            };
+
+            try {
+                const url = editingId
+                    ? `${API_BASE_URL}/inventory/${editingId}`
+                    : `${API_BASE_URL}/inventory?sellerId=${encodeURIComponent(currentUser.id)}`;
+
+                const response = await fetch(url, {
+                    method: editingId ? 'PUT' : 'POST',
+                    headers: apiHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Could not save inventory.');
+                }
+
+                toggleModal('postItemModal');
+                document.getElementById('postItemForm').reset();
+                removeUploadedImage();
+                document.getElementById('editingItemId').value = '';
+                showToast(editingId ? 'Inventory updated successfully!' : 'Inventory successfully added!', 'success');
+                await loadBackendInventory();
+                setCategory('All');
+            } catch (error) {
+                showToast(error.message || 'Could not save inventory.', 'error');
+            }
+        }
+
+        async function deleteInventoryFromBackend() {
+            if (itemToDeleteId === null) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/inventory/${itemToDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json().catch(() => null);
+
+                if (!response.ok) {
+                    throw new Error(data?.error || 'Could not delete inventory.');
+                }
+
+                itemToDeleteId = null;
+                toggleModal('deleteConfirmModal');
+                showToast('Item deleted successfully!', 'success');
+                await loadBackendInventory();
+            } catch (error) {
+                showToast(error.message || 'Could not delete inventory.', 'error');
+            }
+        }
+
+        function requireLogin() {
+            if (!currentUser) {
+                showToast('Please login first.', 'error');
+                showPage('loginPage');
+                return false;
+            }
+            return true;
+        }
+
+        async function loadBackendRequirements() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/requirements`);
+                const data = await response.json().catch(() => []);
+
+                if (!response.ok) return;
+
+                const requirements = Array.isArray(data)
+                    ? data.filter(r => r.buyer?.id === currentUser.id)
+                    : [];
+
+                renderBackendRequirements(requirements);
+            } catch (error) {
+                console.error('Requirement load error:', error);
+            }
+        }
+
+        function renderBackendRequirements(requirements) {
+            const container = document.querySelector('#myRequirementsView .grid');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            const addButton = document.createElement('button');
+            addButton.type = 'button';
+            addButton.className = 'mb-2 w-fit px-6 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white rounded-xl font-black shadow-lg';
+            addButton.textContent = '+ Post Requirement';
+            addButton.onclick = openRequirementModal;
+            container.appendChild(addButton);
+
+            if (!requirements.length) {
+                const empty = document.createElement('div');
+                empty.className = 'bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-8 text-center text-slate-500 font-bold';
+                empty.textContent = 'You have not posted any requirements yet.';
+                container.appendChild(empty);
+                return;
+            }
+
+            requirements.forEach(req => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-5';
+                card.innerHTML = `
+                    <div>
+                        <span class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-widest mb-3 inline-block">Active Search</span>
+                        <h3 class="text-2xl font-black text-slate-900">${escapeHtml(req.category)}</h3>
+                        <p class="text-slate-500 font-medium mt-1">${escapeHtml(req.description || 'No description')} • Quantity: ${req.quantityRequired}</p>
+                        <p class="text-slate-500 font-medium mt-1">Budget: ₹${req.minBudgetPerUnit ?? 0} - ₹${req.maxBudgetPerUnit ?? 0} per unit • ${escapeHtml(req.location || '')}</p>
+                    </div>
+                    <button onclick="generateRequirementMatches(${req.id})" class="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors whitespace-nowrap">Find Matches</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[ch]));
+        }
+
+        function openRequirementModal() {
+            if (!requireLogin()) return;
+
+            let modal = document.getElementById('backendRequirementModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'backendRequirementModal';
+                modal.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-[2rem] p-8 w-full max-w-2xl shadow-2xl border-4 border-white">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-black text-slate-900">Post Requirement</h2>
+                            <button type="button" id="closeRequirementModal" class="w-10 h-10 rounded-full bg-slate-100 font-black">×</button>
+                        </div>
+                        <form id="backendRequirementForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input id="reqCategory" required placeholder="Category" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                            <input id="reqQuantity" required type="number" min="1" placeholder="Quantity required" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                            <input id="reqMinBudget" type="number" min="0" placeholder="Min budget / unit" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                            <input id="reqMaxBudget" type="number" min="0" placeholder="Max budget / unit" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                            <input id="reqLocation" required placeholder="Location e.g. Bhopal" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold md:col-span-2">
+                            <textarea id="reqDescription" placeholder="What are you looking for?" class="border-2 border-slate-200 rounded-xl px-4 py-3 font-bold md:col-span-2 h-28"></textarea>
+                            <button type="submit" class="md:col-span-2 py-4 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white rounded-xl font-black">Post Requirement</button>
+                        </form>
+                    </div>`;
+                document.body.appendChild(modal);
+                document.getElementById('closeRequirementModal').onclick = () => modal.remove();
+                document.getElementById('backendRequirementForm').onsubmit = createBackendRequirement;
+            }
+        }
+
+        async function createBackendRequirement(event) {
+            event.preventDefault();
+
+            const category = document.getElementById('reqCategory').value.trim();
+            const quantity = Number(document.getElementById('reqQuantity').value);
+            const minBudget = Number(document.getElementById('reqMinBudget').value || 0);
+            const maxBudget = Number(document.getElementById('reqMaxBudget').value || 0);
+            const location = document.getElementById('reqLocation').value.trim();
+            const description = document.getElementById('reqDescription').value.trim();
+
+            if (!category || !location || !Number.isInteger(quantity) || quantity < 1 || maxBudget < minBudget) {
+                showToast('Please enter valid requirement details.', 'error');
+                return;
+            }
+
+            const payload = {
+                buyerName: currentUser.name,
+                category,
+                description,
+                quantityRequired: quantity,
+                minBudgetPerUnit: minBudget,
+                maxBudgetPerUnit: maxBudget,
+                location
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/requirements?buyerId=${encodeURIComponent(currentUser.id)}`, {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) throw new Error(data.error || 'Could not create requirement.');
+
+                document.getElementById('backendRequirementModal')?.remove();
+                showToast('Requirement posted successfully!', 'success');
+                await loadBackendRequirements();
+            } catch (error) {
+                showToast(error.message || 'Could not create requirement.', 'error');
+            }
+        }
+
+        let backendMatches = [];
+
+        async function loadBackendMatches() {
+            if (!currentUser) return;
+
+            try {
+                const reqResponse = await fetch(`${API_BASE_URL}/requirements`);
+                const requirements = await reqResponse.json().catch(() => []);
+
+                if (!reqResponse.ok || !Array.isArray(requirements)) {
+                    throw new Error('Could not load requirements.');
+                }
+
+                const myRequirements = requirements.filter(
+                    req => req.buyer?.id === currentUser.id
+                );
+
+                const allMatches = [];
+
+                for (const req of myRequirements) {
+                    const response = await fetch(
+                        `${API_BASE_URL}/requirements/${req.id}/matches`
+                    );
+                    const matches = await response.json().catch(() => []);
+
+                    if (response.ok && Array.isArray(matches)) {
+                        matches.forEach(match => {
+                            allMatches.push({ ...match, requirement: req });
+                        });
+                    }
+                }
+
+                backendMatches = allMatches;
+                renderBackendMatches();
+            } catch (error) {
+                console.error('Match load error:', error);
+                renderBackendMatches(error.message || 'Could not load matches.');
+            }
+        }
+
+        function renderBackendMatches(errorMessage = '') {
+            const container = document.getElementById('matchesContainer');
+            const count = document.getElementById('matchesCount');
+            if (!container || !count) return;
+
+            if (errorMessage) {
+                count.textContent = '0';
+                container.innerHTML = `
+                    <div class="bg-white rounded-[2rem] shadow-lg border-2 border-red-100 p-8 text-center text-red-500 font-bold">
+                        ${escapeHtml(errorMessage)}
+                    </div>`;
+                return;
+            }
+
+            count.textContent = String(backendMatches.length);
+
+            if (!backendMatches.length) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-[2rem] shadow-lg border-2 border-slate-100 p-8 text-center text-slate-500 font-bold">
+                        No matches found yet. Go to Requirements and click "Find Matches".
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            backendMatches.forEach((match, index) => {
+                const item = match.inventory || {};
+                const requirement = match.requirement || {};
+                const image = item.imageUrl ||
+                    'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=600&q=80';
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-[2rem] shadow-xl border-l-8 border-l-fuchsia-500 border-t-2 border-r-2 border-b-2 border-slate-100 p-6 flex flex-col md:flex-row items-center gap-6';
+
+                card.innerHTML = `
+                    <img src="${escapeHtml(image)}" class="w-24 h-24 rounded-2xl object-cover shadow-md" alt="${escapeHtml(item.productName || 'Inventory')}">
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex flex-wrap gap-2 justify-center md:justify-start mb-2">
+                            <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-xs font-black">${escapeHtml(item.category || 'Match')}</span>
+                            <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-xs font-black">${match.matchScore ?? 0}% Match</span>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-900">${escapeHtml(item.productName || 'Inventory')}</h3>
+                        <p class="text-slate-600 font-medium mt-1">${escapeHtml(match.reason || 'This inventory matches your requirement.')}</p>
+                        <p class="text-slate-500 font-bold mt-2">Seller: ${escapeHtml(item.seller?.name || 'Unknown')} • Qty: ${item.quantity ?? 0} • ₹${item.pricePerUnit ?? 0}/unit</p>
+                        <p class="text-slate-400 text-sm font-bold mt-1">Requirement: ${escapeHtml(requirement.category || '')}</p>
+                    </div>
+                    <button onclick="openBackendMatchDetails(${index})" class="px-8 py-4 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white rounded-2xl font-black text-lg shadow-lg hover:scale-105 transition-transform w-full md:w-auto">
+                        View Details
+                    </button>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function openBackendMatchDetails(index) {
+            const match = backendMatches[index];
+            const item = match?.inventory;
+
+            if (!item) {
+                showToast('Match details are not available.', 'error');
+                return;
+            }
+
+            currentDetailId = item.id;
+            document.getElementById('detailImage').src =
+                item.imageUrl ||
+                'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=600&q=80';
+            document.getElementById('detailCategory').textContent = item.category || 'Inventory';
+            document.getElementById('detailTitle').textContent = item.productName || 'Inventory';
+            document.getElementById('detailPrice').textContent =
+                new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+                    .format(item.pricePerUnit ?? 0);
+            document.getElementById('detailShop').textContent = item.seller?.name || 'Seller';
+            document.getElementById('detailQty').textContent = item.quantity ?? 0;
+            document.getElementById('detailLocation').textContent = item.location || 'Not provided';
+            document.getElementById('detailGST').textContent = 'Not provided by backend';
+            document.getElementById('offerAmount').value = '';
+            toggleModal('productDetailModal');
+        }
+
+        async function generateRequirementMatches(requirementId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/requirements/${requirementId}/matches`, { method: 'POST' });
+                const matches = await response.json().catch(() => []);
+                if (!response.ok) throw new Error(matches.error || 'Could not generate matches.');
+
+                if (!Array.isArray(matches) || matches.length === 0) {
+                    showToast('No matching inventory found.', 'error');
+                    return;
+                }
+
+                const summary = matches.slice(0, 5).map(m => {
+                    const name = m.inventory?.productName || 'Inventory';
+                    return `${name}: ${m.matchScore}%`;
+                }).join(' | ');
+
+                await loadBackendMatches();
+                switchDashboardView('matchesView');
+                showToast(`Matches found: ${summary}`, 'success');
+            } catch (error) {
+                showToast(error.message || 'Could not generate matches.', 'error');
+            }
+        }
+
+        function openRegisterModal() {
+            let modal = document.getElementById('backendRegisterModal');
+            if (modal) return;
+
+            modal = document.createElement('div');
+            modal.id = 'backendRegisterModal';
+            modal.className = 'fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl border-4 border-white">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-black text-slate-900">Create Account</h2>
+                        <button type="button" id="closeRegisterModal" class="w-10 h-10 rounded-full bg-slate-100 font-black">×</button>
+                    </div>
+                    <form id="backendRegisterForm" class="space-y-4">
+                        <input id="registerName" required placeholder="Name / Business Name" class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                        <input id="registerEmail" required type="email" placeholder="Email Address" class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                        <input id="registerPassword" required type="password" minlength="6" placeholder="Password" class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                        <select id="registerRole" required class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 font-bold">
+                            <option value="SELLER">Seller</option>
+                            <option value="BUYER">Buyer</option>
+                        </select>
+                        <button type="submit" class="w-full py-4 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white rounded-xl font-black">Create Account</button>
+                    </form>
+                </div>`;
+
+            document.body.appendChild(modal);
+            document.getElementById('closeRegisterModal').onclick = () => modal.remove();
+            document.getElementById('backendRegisterForm').onsubmit = registerToBackend;
+        }
+
+        async function registerToBackend(event) {
+            event.preventDefault();
+
+            const payload = {
+                name: document.getElementById('registerName').value.trim(),
+                email: document.getElementById('registerEmail').value.trim(),
+                password: document.getElementById('registerPassword').value,
+                role: document.getElementById('registerRole').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/register`, {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Registration failed.');
+                }
+
+                document.getElementById('backendRegisterModal')?.remove();
+                document.getElementById('emailInput').value = payload.email;
+                document.getElementById('passwordInput').value = payload.password;
+                showToast('Account created successfully. You can now sign in.', 'success');
+            } catch (error) {
+                showToast(error.message || 'Registration failed.', 'error');
+            }
+        }
+
+        // Connect existing login form to Spring Boot.
+        const loginForm = document.querySelector('#loginPage form');
+        if (loginForm) {
+            loginForm.onsubmit = loginToBackend;
+        }
+
+        // Replace local-only inventory operations with backend operations.
+        window.submitNewItem = saveInventoryToBackend;
+        window.executeDelete = deleteInventoryFromBackend;
+
+        // Load backend data whenever the dashboard is opened.
+        const originalShowPage = window.showPage;
+        if (typeof originalShowPage === 'function') {
+            window.showPage = function(pageId) {
+                originalShowPage(pageId);
+                if (pageId === 'dashboardPage' && currentUser) {
+                    loadBackendInventory();
+                    loadBackendRequirements();
+                }
+            };
+        }
+
+        // If the user already logged in during an earlier session, refresh data.
+        if (currentUser) {
+            loadBackendInventory();
+            loadBackendRequirements();
+            loadBackendMatches();
+        }
+    </script>
+</body>
+</html>
