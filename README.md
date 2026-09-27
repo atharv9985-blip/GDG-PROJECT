@@ -35,7 +35,7 @@ StockSurge provides a dedicated B2B platform where businesses can:
 - AI-driven matching algorithms to automatically pair buyer requirements with incoming dead stock listings.
 
 ## Team Members
+- **Anadi Swarnkar** - Frontend Developer  & Team Lead
 - **Atharv Raghuwanshi** - Database, Integration & Team Lead
-- **Anadi Swarnkar** - Frontend Developer
 - **Aryan Nayak** - Backend Developer
 - **Akshat Malviya** - UI/UX Designer & Core Contributor
